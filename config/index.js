@@ -56,4 +56,7 @@ module.exports = {
     hour: parseInt(process.env.BRIEFING_HOUR || '11'),
     minute: parseInt(process.env.BRIEFING_MINUTE || '30'),
   },
+
+  // External chat API — used by developer integrations (e.g. WhatsApp backend)
+  chatApiKey: process.env.CHAT_API_KEY,
 };

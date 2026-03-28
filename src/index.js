@@ -5,6 +5,7 @@ const whatsappService = require('./services/whatsapp');
 const orchestrator = require('./handlers/orchestrator');
 const scheduler = require('./jobs/scheduler');
 const db = require('./db/pool');
+const apiRoutes = require('./routes/api');
 
 const app = express();
 app.use(express.json());
@@ -23,6 +24,10 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'unhealthy', database: 'disconnected' });
   }
 });
+
+// ─── External Chat API ────────────────────────────────────────────────────
+
+app.use('/api/chat', apiRoutes);
 
 // ─── WhatsApp Webhook Verification ────────────────────────────────────────
 
