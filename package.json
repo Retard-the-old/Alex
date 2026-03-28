@@ -1,0 +1,28 @@
+{
+  "name": "alex-assistant",
+  "version": "1.0.0",
+  "description": "Alex — WhatsApp-first AI personal assistant",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "test": "node src/test-runner.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "express": "^4.21.0",
+    "pg": "^8.13.0",
+    "bullmq": "^5.25.0",
+    "ioredis": "^5.4.0",
+    "axios": "^1.7.0",
+    "winston": "^3.14.0",
+    "dotenv": "^16.4.0",
+    "cron": "^3.1.0",
+    "googleapis": "^140.0.0",
+    "form-data": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
