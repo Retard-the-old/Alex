@@ -19,8 +19,8 @@ module.exports = {
 
   claude: {
     apiKey: process.env.ANTHROPIC_API_KEY,
-    modelSmart: process.env.CLAUDE_MODEL_SMART || 'claude-opus-4-5-20250514',
-    modelFast: process.env.CLAUDE_MODEL_FAST || 'claude-sonnet-4-5-20250514',
+    modelSmart: process.env.CLAUDE_MODEL_SMART || 'claude-opus-4-6',
+    modelFast: process.env.CLAUDE_MODEL_FAST || 'claude-sonnet-4-6',
   },
 
   database: {
