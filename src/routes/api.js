@@ -3,6 +3,7 @@ const claude = require('../services/claude');
 const prompts = require('../services/prompts');
 const config = require('../../config');
 const logger = require('../utils/logger');
+const db = require('../db/pool');
 
 const router = express.Router();
 
@@ -110,13 +111,29 @@ router.post('/message', requireApiKey, async (req, res) => {
       confidence: classification?.classification?.confidence || classification?.confidence,
     });
 
-    // ── Step 2: Build user message with context ──────────────
+    // ── Step 2: Check if sender is a registered contact ─────
     const userLabel = sender_name || sender_number;
-    const userMessage = `${userLabel} says via ${platform}: "${message_body}"
+    let contactContext = '';
+    try {
+      const contact = await db.queryOne(
+        'SELECT name, role, projects FROM contacts WHERE whatsapp = $1',
+        [sender_number]
+      );
+      if (contact) {
+        contactContext = `\n\nCONTACT VERIFIED: ${contact.name} is a registered contact in Max's database (${contact.role}). Process this message normally.`;
+      } else {
+        contactContext = `\n\nCONTACT STATUS: Sender number ${sender_number} is not in Max's contacts database.`;
+      }
+    } catch (dbErr) {
+      logger.warn('Contact lookup failed', { error: dbErr.message });
+    }
+
+    // ── Step 3: Build user message with context ──────────────
+    const userMessage = `${userLabel} says via ${platform}: "${message_body}"${contactContext}
 
 Respond as Alex. Keep it concise — this will be delivered as a ${platform} message.`;
 
-    // ── Step 3: Execute the appropriate agent ────────────────
+    // ── Step 4: Execute the appropriate agent ────────────────
     const systemPrompt = promptForIntent(intent);
 
     // ── CONTENT ENGINE HOOK ──────────────────────────────────
