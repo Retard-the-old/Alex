@@ -1,4 +1,6 @@
 const express = require('express');
+const https = require('https');
+const http = require('http');
 const claude = require('../services/claude');
 const prompts = require('../services/prompts');
 const config = require('../../config');
@@ -21,6 +23,74 @@ const router = express.Router();
 
 // ─── Middleware: API key auth ──────────────────────────────────
 
+// ─── WhatsApp reply delivery helpers ──────────────────────────
+
+async function deliverDirect(to, body) {
+  const baseUrl = config.whatsappReplyBaseUrl;
+  if (!baseUrl) {
+    logger.warn('WHATSAPP_REPLY_BASE_URL not set — skipping delivery');
+    return;
+  }
+  await whatsappPost(`${baseUrl}/api/v1/whatsapp/reply/direct/`, {
+    to,
+    message_type: 'text',
+    body,
+    media_url: null,
+  });
+}
+
+async function deliverToMax(body) {
+  const baseUrl = config.whatsappReplyBaseUrl;
+  if (!baseUrl) {
+    logger.warn('WHATSAPP_REPLY_BASE_URL not set — skipping Max notification');
+    return;
+  }
+  await whatsappPost(`${baseUrl}/api/v1/whatsapp/reply/max/`, {
+    message_type: 'text',
+    body,
+    media_url: null,
+  });
+}
+
+function whatsappPost(url, payload) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(payload);
+    const parsed = new URL(url);
+    const lib = parsed.protocol === 'https:' ? https : http;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(data),
+    };
+    if (config.whatsappReplyApiKey) {
+      headers['x-api-key'] = config.whatsappReplyApiKey;
+    }
+    const req = lib.request(
+      { hostname: parsed.hostname, port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80), path: parsed.pathname, method: 'POST', headers },
+      (res) => {
+        let body = '';
+        res.on('data', chunk => { body += chunk; });
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            logger.info('WhatsApp reply delivered', { url, status: res.statusCode });
+            resolve(body);
+          } else {
+            logger.error('WhatsApp reply failed', { url, status: res.statusCode, body });
+            resolve(body); // resolve so one failure doesn't crash the flow
+          }
+        });
+      }
+    );
+    req.on('error', err => {
+      logger.error('WhatsApp reply request error', { url, error: err.message });
+      resolve(); // don't reject — delivery failure shouldn't kill the response
+    });
+    req.write(data);
+    req.end();
+  });
+}
+
+// ─── Middleware: API key auth ──────────────────────────────────
+
 function requireApiKey(req, res, next) {
   const key = req.headers['x-api-key'];
   if (!key || key !== config.chatApiKey) {
@@ -35,9 +105,10 @@ function requireApiKey(req, res, next) {
 
 function promptForIntent(intent) {
   switch (intent.toUpperCase()) {
-    case 'TASK_OUTREACH':    return prompts.PROMPTS.task();
-    case 'TRAVEL':           return prompts.PROMPTS.travel();
+    case 'TASK_OUTREACH':      return prompts.PROMPTS.task();
+    case 'TRAVEL':             return prompts.PROMPTS.travel();
     case 'PROJECT_MANAGEMENT': return prompts.PROMPTS.project();
+    case 'HUMAN_ESCALATION':   return prompts.PROMPTS.conversational();
     case 'PERSONAL_ADMIN':
     case 'CONVERSATIONAL':
     default:
@@ -155,6 +226,17 @@ Respond as Alex. Keep it concise — this will be delivered as a ${platform} mes
       userMessage,
       maxTokens: 1024,
     });
+
+    // ── Step 5: Deliver the reply ────────────────────────────
+    if (intent.toUpperCase() === 'HUMAN_ESCALATION') {
+      // Notify Max and tell the user help is coming
+      await Promise.all([
+        deliverToMax(`User ${sender_name || sender_number} needs human assistance:\n\n"${message_body}"`),
+        deliverDirect(sender_number, reply),
+      ]);
+    } else {
+      await deliverDirect(sender_number, reply);
+    }
 
     res.json({
       reply,

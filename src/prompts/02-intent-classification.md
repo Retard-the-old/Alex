@@ -148,7 +148,19 @@ Decomposition rules:
 - Calendar events are automatic (not a separate task) — don't decompose for "add to calendar"
 - Determine execution order: independent tasks can be parallel; dependent tasks must be sequential
 
-### 8. CONVERSATIONAL → Orchestrator (Direct)
+### 8. HUMAN_ESCALATION → Route to Max directly
+Keywords/patterns: "talk to a human", "speak to Max", "get Max", "I need Max", explicit request for human agent, or when Alex cannot resolve the issue and human intervention is clearly required
+
+Example messages:
+- "I need to speak to a human"
+- "Can I talk to Max directly?"
+- "This isn't something you can help with, get Max"
+
+When classified as HUMAN_ESCALATION:
+- Alex replies to the user acknowledging the escalation (e.g. "I've let Max know — he'll be in touch shortly")
+- Alex also sends an alert to Max with the user's original message
+
+### 9. CONVERSATIONAL → Orchestrator (Direct)
 Keywords/patterns: greetings, general questions, summaries, schedule overview, "what have I got on today", "good morning", "thanks", status checks that span multiple domains, briefing requests
 
 Example messages:
@@ -257,6 +269,7 @@ If the system supports voice transcription, transcribe first, then classify the 
 | PERSONAL_ADMIN | Orchestrator | No |
 | EMAIL_COMMAND | Re-classify → route | Depends on re-classified intent |
 | CROSS_DOMAIN | Orchestrator → decompose → multiple handlers | Per sub-task rules |
+| HUMAN_ESCALATION | Max (direct) | Yes — always notifies Max |
 | CONVERSATIONAL | Orchestrator | No |
 
 ---

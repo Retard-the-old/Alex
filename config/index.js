@@ -59,4 +59,8 @@ module.exports = {
 
   // External chat API — used by developer integrations (e.g. WhatsApp backend)
   chatApiKey: process.env.CHAT_API_KEY,
+
+  // WhatsApp reply delivery — Arif's backend that actually sends messages
+  whatsappReplyBaseUrl: process.env.WHATSAPP_REPLY_BASE_URL,
+  whatsappReplyApiKey: process.env.WHATSAPP_REPLY_API_KEY,
 };
